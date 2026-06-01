@@ -344,6 +344,17 @@
     .f-info span { font-size: 10px; color: var(--faint); }
     .f-status { margin-left: auto; width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
 
+    /* ── Error message ── */
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 0.5px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+
     /* responsive */
     @media (max-width: 768px) {
       nav { padding: 16px 20px; }
@@ -443,6 +454,10 @@
         <div class="card-sub">Enter a room name to start or join an existing call.</div>
       </div>
 
+      {% if error %}
+      <div class="error-message">{{ error }}</div>
+      {% endif %}
+
       <form method="POST" action="">
         {% csrf_token %}
         <div class="form-group">
@@ -458,6 +473,7 @@
               name="room"
               placeholder="e.g. team-standup, my-meeting…"
               autocomplete="off"
+              required
             />
           </div>
         </div>
@@ -474,10 +490,10 @@
 
       <p class="quick-label">Quick rooms</p>
       <div class="quick-rooms">
-        <button class="quick-pill" onclick="fillRoom('general')">general</button>
-        <button class="quick-pill" onclick="fillRoom('standup')">standup</button>
-        <button class="quick-pill" onclick="fillRoom('design-review')">design-review</button>
-        <button class="quick-pill" onclick="fillRoom('war-room')">war-room</button>
+        <button class="quick-pill" type="button" onclick="fillRoom('general')">general</button>
+        <button class="quick-pill" type="button" onclick="fillRoom('standup')">standup</button>
+        <button class="quick-pill" type="button" onclick="fillRoom('design-review')">design-review</button>
+        <button class="quick-pill" type="button" onclick="fillRoom('war-room')">war-room</button>
       </div>
     </div>
   </div>
@@ -486,13 +502,13 @@
   <div class="features">
     <div class="feat">
       <div class="feat-icon" style="background:rgba(79,140,255,0.1);color:#4f8cff;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3l-4 4-4-4"/></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 5l-3.5 5.5M8 5l3.5 5.5"/></svg>
       </div>
       HD Video & Audio
     </div>
     <div class="feat">
       <div class="feat-icon" style="background:rgba(167,139,250,0.1);color:#a78bfa;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v4"/></svg>
       </div>
       End-to-End Encrypted
     </div>
@@ -516,7 +532,7 @@
     </div>
     <div class="feat">
       <div class="feat-icon" style="background:rgba(236,72,153,0.1);color:#f472b6;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       </div>
       Multi-Participant
     </div>
@@ -532,6 +548,7 @@
     function fillRoom(name) {
       document.getElementById('room').value = name;
       document.getElementById('room').focus();
+      document.querySelector('form').submit();
     }
   </script>
 </body>
