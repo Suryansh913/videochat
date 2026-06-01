@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Video Call</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0a0b0d;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .vc-root {
+      background: #0e0f11;
+      border-radius: 16px;
+      overflow: hidden;
+      width: 100%;
+      max-width: 960px;
+      min-height: 580px;
+      display: flex;
+      flex-direction: column;
+      border: 0.5px solid rgba(255,255,255,0.08);
+    }
+
+    /* ── Header ── */
+    .vc-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      background: rgba(255,255,255,0.03);
+      border-bottom: 0.5px solid rgba(255,255,255,0.07);
+    }
+    .vc-header-left { display: flex; align-items: center; gap: 10px; }
+    .rec-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: transparent;
+      transition: background 0.3s;
+    }
+    .rec-dot.live { background: #e24b4a; animation: blink 1.4s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .vc-title { font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.85); }
+    .vc-duration {
+      font-size: 12px; color: rgba(255,255,255,0.4);
+      font-variant-numeric: tabular-nums; letter-spacing: 0.04em;
+    }
+    .vc-badges { display: flex; align-items: center; gap: 8px; }
+    .badge {
+      font-size: 11px; padding: 3px 10px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.07);
+      color: rgba(255,255,255,0.45);
+      display: flex; align-items: center; gap: 4px;
+    }
+    .badge i { font-size: 11px; }
+
+    /* ── Body ── */
+    .vc-body { flex: 1; display: flex; flex-direction: column; padding: 14px; gap: 12px; }
+
+    .vc-toolbar {
+      display: flex; align-items: center;
+      justify-content: space-between; flex-wrap: wrap; gap: 8px;
+    }
+    .layout-btns { display: flex; gap: 6px; }
+    .lay-btn {
+      border: 0.5px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+      color: rgba(255,255,255,0.4);
+      border-radius: 8px; padding: 5px 12px;
+      font-size: 12px; cursor: pointer;
+      display: flex; align-items: center; gap: 5px;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .lay-btn:hover, .lay-btn.sel {
+      background: rgba(255,255,255,0.11);
+      color: rgba(255,255,255,0.85);
+      border-color: rgba(255,255,255,0.25);
+    }
+    .participant-count { font-size: 12px; color: rgba(255,255,255,0.3); }
+
+    /* ── Video Grid ── */
+    .video-grid {
+      display: grid; gap: 10px; flex: 1;
+      min-height: 300px;
+    }
+    .video-grid.layout-1 { grid-template-columns: 1fr; }
+    .video-grid.layout-2 { grid-template-columns: 1fr 1fr; }
+    .video-grid.layout-3 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr auto; }
+    .video-grid.layout-3 .v-tile:first-child { grid-column: span 2; }
+
+    .v-tile {
+      position: relative;
+      background: #14151a;
+      border-radius: 12px; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      border: 0.5px solid rgba(255,255,255,0.07);
+      transition: border-color 0.2s, box-shadow 0.2s;
+      min-height: 160px;
+    }
+    .v-tile.speaking {
+      border-color: #1d9e75;
+      box-shadow: 0 0 0 2px rgba(29,158,117,0.25);
+    }
+    .v-tile video {
+      width: 100%; height: 100%;
+      object-fit: cover; display: block;
+    }
+    .v-tile video.hidden { display: none; }
+
+    .v-avatar {
+      width: 56px; height: 56px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 500;
+    }
+    .v-avatar-you  { background: #26215c; color: #afa9ec; }
+    .v-avatar-peer { background: #04342c; color: #5dcaa5; }
+
+    .v-label {
+      position: absolute; bottom: 10px; left: 12px;
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(0,0,0,0.55); border-radius: 6px;
+      padding: 4px 10px;
+    }
+    .v-label span { font-size: 12px; color: rgba(255,255,255,0.85); font-weight: 500; }
+    .v-label i { font-size: 13px; color: #e24b4a; }
+
+    .you-tag {
+      position: absolute; top: 10px; left: 12px;
+      font-size: 10px; padding: 2px 8px; border-radius: 4px;
+      background: rgba(255,255,255,0.09); color: rgba(255,255,255,0.45);
+    }
+
+    .cam-switch-btn {
+      position: absolute; bottom: 10px; right: 12px;
+      background: rgba(0,0,0,0.5);
+      border: 0.5px solid rgba(255,255,255,0.15);
+      border-radius: 8px; padding: 6px 10px;
+      cursor: pointer; color: rgba(255,255,255,0.75);
+      font-size: 13px; display: flex; align-items: center; gap: 5px;
+      transition: background 0.15s;
+    }
+    .cam-switch-btn:hover { background: rgba(255,255,255,0.12); }
+    .cam-switch-btn i { font-size: 15px; }
+
+    .v-signal {
+      position: absolute; top: 10px; right: 12px;
+      display: flex; align-items: flex-end; gap: 2px;
+    }
+    .sig-bar { width: 3px; border-radius: 1px; background: rgba(255,255,255,0.15); }
+    .sig-bar.on  { background: #1d9e75; }
+
+    /* ── Controls ── */
+    .vc-controls {
+      display: flex; align-items: center;
+      justify-content: center; gap: 10px;
+      padding: 6px 0; flex-wrap: wrap;
+    }
+    .ctrl-btn {
+      width: 48px; height: 48px; border-radius: 50%;
+      border: 0.5px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.7);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      transition: background 0.15s, transform 0.1s, border-color 0.15s;
+    }
+    .ctrl-btn:hover  { background: rgba(255,255,255,0.13); }
+    .ctrl-btn:active { transform: scale(0.93); }
+    .ctrl-btn.on {
+      background: rgba(255,255,255,0.14);
+      border-color: rgba(255,255,255,0.28);
+      color: #fff;
+    }
+    .ctrl-btn.green {
+      width: 54px; height: 54px; font-size: 20px;
+      background: #0f6e56; border-color: #1d9e75; color: #fff;
+    }
+    .ctrl-btn.green:hover { background: #1d9e75; }
+    .ctrl-btn.red-call {
+      width: 54px; height: 54px; font-size: 20px;
+      background: #a32d2d; border-color: #e24b4a; color: #fff;
+    }
+    .ctrl-btn.red-call:hover { background: #c03535; }
+    .ctrl-btn.hangup {
+      background: #a32d2d; border-color: #e24b4a; color: #fff;
+    }
+    .ctrl-btn.hangup:hover { background: #c03535; }
+
+    /* ── Footer ── */
+    .vc-footer {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      background: rgba(255,255,255,0.02);
+      border-top: 0.5px solid rgba(255,255,255,0.05);
+      flex-wrap: wrap; gap: 8px;
+    }
+    .pav-group { display: flex; align-items: center; gap: 6px; }
+    .pav {
+      width: 26px; height: 26px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 500;
+      border: 2px solid #0e0f11;
+      margin-right: -6px;
+    }
+    .pav-count { font-size: 12px; color: rgba(255,255,255,0.35); margin-left: 14px; }
+    .footer-tip { font-size: 11px; color: rgba(255,255,255,0.22); }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .video-grid.layout-2,
+      .video-grid.layout-3 { grid-template-columns: 1fr; }
+      .video-grid.layout-3 .v-tile:first-child { grid-column: span 1; }
+      .ctrl-btn { width: 42px; height: 42px; font-size: 16px; }
+      .ctrl-btn.green, .ctrl-btn.red-call { width: 48px; height: 48px; }
+    }
+    @media (max-width: 400px) {
+      .vc-header { padding: 10px 14px; }
+      .vc-body   { padding: 10px; gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="vc-root">
+
+  <!-- Header -->
+  <div class="vc-header">
+    <div class="vc-header-left">
+      <div class="rec-dot" id="recDot"></div>
+      <span class="vc-title">Video Call</span>
+      <span class="vc-duration" id="timer">00:00</span>
+    </div>
+    <div class="vc-badges">
+      <span class="badge"><i class="ti ti-lock"></i> Encrypted</span>
+      <span class="badge" id="hdBadge"><i class="ti ti-wifi"></i> HD</span>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="vc-body">
+
+    <!-- Toolbar -->
+    <div class="vc-toolbar">
+      <div class="layout-btns">
+        <button class="lay-btn sel" id="lay1" onclick="setLayout(1)">
+          <i class="ti ti-layout-distribute-vertical"></i> Solo
+        </button>
+        <button class="lay-btn" id="lay2" onclick="setLayout(2)">
+          <i class="ti ti-layout-columns"></i> Split
+        </button>
+        <button class="lay-btn" id="lay3" onclick="setLayout(3)">
+          <i class="ti ti-layout-grid"></i> Grid
+        </button>
+      </div>
+      <span class="participant-count" id="pCount">Waiting…</span>
+    </div>
+
+    <!-- Video tiles -->
+    <div class="video-grid layout-1" id="grid">
+
+      <!-- Your tile -->
+      <div class="v-tile speaking" id="tileOurs">
+        <video id="ours" autoplay muted playsinline></video>
+        <div class="v-avatar v-avatar-you" id="ourAvatar">You</div>
+        <span class="you-tag">You</span>
+        <div class="v-label" id="ourLabel">
+          <span>You</span>
+        </div>
+        <div class="v-signal">
+          <div class="sig-bar on"  style="height:5px"></div>
+          <div class="sig-bar on"  style="height:8px"></div>
+          <div class="sig-bar on"  style="height:11px"></div>
+          <div class="sig-bar on"  style="height:14px"></div>
+        </div>
+        <!-- Camera switch button (only on your tile) -->
+        <button class="cam-switch-btn" id="camSwitchBtn" onclick="switchCamera()">
+          <i class="ti ti-camera-rotate"></i>
+          <span id="camFaceLabel">Front</span>
+        </button>
+      </div>
+
+      <!-- Remote tile -->
+      <div class="v-tile" id="tileRemote" style="display:none">
+        <video id="remote" autoplay playsinline></video>
+        <div class="v-avatar v-avatar-peer" id="remoteAvatar">P</div>
+        <div class="v-label">
+          <span>Remote</span>
+        </div>
+        <div class="v-signal">
+          <div class="sig-bar on"  style="height:5px"></div>
+          <div class="sig-bar on"  style="height:8px"></div>
+          <div class="sig-bar on"  style="height:11px"></div>
+          <div class="sig-bar"     style="height:14px"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Control bar -->
+    <div class="vc-controls">
+      <button class="ctrl-btn on" id="micBtn"    aria-label="Toggle microphone" onclick="toggleMic()">
+        <i class="ti ti-microphone" id="micIcon"></i>
+      </button>
+      <button class="ctrl-btn on" id="camBtn"    aria-label="Toggle camera"     onclick="toggleCam()">
+        <i class="ti ti-video" id="camIcon"></i>
+      </button>
+      <button class="ctrl-btn"    id="screenBtn" aria-label="Share screen"      onclick="toggleScreen()">
+        <i class="ti ti-screencast" id="screenIcon"></i>
+      </button>
+      <button class="ctrl-btn green" id="callBtn" aria-label="Start call"       onclick="handleCallBtn()">
+        <i class="ti ti-phone" id="callBtnIcon"></i>
+      </button>
+      <button class="ctrl-btn"    id="chatBtn"   aria-label="Chat"              onclick="this.classList.toggle('on')">
+        <i class="ti ti-message-circle"></i>
+      </button>
+      <button class="ctrl-btn"    id="peopleBtn" aria-label="Participants"      onclick="this.classList.toggle('on')">
+        <i class="ti ti-users"></i>
+      </button>
+      <button class="ctrl-btn hangup" aria-label="Leave call" onclick="leaveCall()">
+        <i class="ti ti-phone-off"></i>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Footer -->
+  <div class="vc-footer">
+    <div class="pav-group">
+      <div class="pav" style="background:#26215c;color:#afa9ec">Y</div>
+      <div class="pav" id="remotePav" style="background:#1a1c20;color:#888;display:none">P</div>
+      <span class="pav-count" id="pavCount">1 in call</span>
+    </div>
+    <span class="footer-tip" id="footerTip">Press the green button to start a call</span>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     WebRTC + WebSocket logic (your original code, preserved)
+     ═══════════════════════════════════════════════════════════ -->
+<script>
+/* ── DOM refs ── */
+const our_video    = document.getElementById('ours');
+const remote_video = document.getElementById('remote');
+const ourAvatar    = document.getElementById('ourAvatar');
+const remoteAvatar = document.getElementById('remoteAvatar');
+const tileRemote   = document.getElementById('tileRemote');
+const camSwitchBtn = document.getElementById('camSwitchBtn');
+const footerTip    = document.getElementById('footerTip');
+
+/* ── State ── */
+let stream;
+let rtcpeerconnection;
+let isFront    = true;
+let micOn      = true;
+let camOn      = true;
+let inCall     = false;
+let timerSecs  = 0;
+let timerIntvl = null;
+let currentLayout = 1;
+
+/* ── Django template variables ── */
+const created = '{{created}}';
+const room    = '{{room}}';
+let isCreated;
+
+/* ── ICE config ── */
+const iceServers = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun.service.mozilla.com' }
+  ]
+};
+
+/* ── WebSocket ── */
+const ws = new WebSocket('ws://127.0.0.1:8000/ws/');
+
+ws.onopen = () => {
+  console.log('WS opened');
+
+  ws.send(JSON.stringify({ command: 'join_room', room }));
+
+  /* get local media */
+  navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    .then(s => {
+      stream = s;
+      our_video.srcObject = s;
+      ourAvatar.style.display = 'none';   /* hide placeholder once video is live */
+      our_video.onloadeddata = () => our_video.play();
+    })
+    .catch(err => {
+      console.warn('Camera/mic error:', err);
+      footerTip.textContent = 'Camera / mic access denied';
+    });
+
+  if (created === 'created') {
+    isCreated = true;
+    footerTip.textContent = 'Room created — press the green button when ready';
+    document.getElementById('callBtn').style.display = 'flex';
+  } else {
+    isCreated = false;
+    ws.send(JSON.stringify({ command: 'join', room }));
+    footerTip.textContent = 'Joined room — waiting for host…';
+  }
+};
+
+ws.onmessage = (e) => {
+  const data = JSON.parse(e.data);
+  console.log('WS message:', data);
+
+  if (data.command === 'join') {
+    if (isCreated) {
+      footerTip.textContent = 'Participant joined — press the green button to call';
+      document.getElementById('pCount').textContent = '2 participants';
+    }
+  }
+  else if (data.command === 'offer') {
+    if (!isCreated) createAnswer(data.offer);
+  }
+  else if (data.command === 'answer') {
+    if (isCreated) {
+      rtcpeerconnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+    }
+  }
+  else if (data.command === 'candidate') {
+    if (rtcpeerconnection) {
+      rtcpeerconnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+    }
+  }
+};
+
+/* ── RTC helpers ── */
+function buildPeerConnection() {
+  const pc = new RTCPeerConnection(iceServers);
+  pc.onicecandidate = (e) => {
+    if (e.candidate) {
+      ws.send(JSON.stringify({
+        command: 'candidate',
+        candidate: e.candidate,
+        iscreated: isCreated,
+        room
+      }));
+    }
+  };
+  pc.ontrack = (e) => {
+    remote_video.srcObject = e.streams[0];
+    remoteAvatar.style.display = 'none';
+    remote_video.onloadedmetadata = () => remote_video.play();
+    /* show remote tile */
+    tileRemote.style.display = 'flex';
+    document.getElementById('remotePav').style.display = 'flex';
+    document.getElementById('pCount').textContent = '2 participants';
+    if (currentLayout === 1) setLayout(2);
+    footerTip.textContent = 'Connected';
+  };
+  if (stream) stream.getTracks().forEach(t => pc.addTrack(t, stream));
+  return pc;
+}
+
+function createOffer() {
+  rtcpeerconnection = buildPeerConnection();
+  rtcpeerconnection.createOffer().then(offer =>
+    rtcpeerconnection.setLocalDescription(offer).then(() => {
+      ws.send(JSON.stringify({ command: 'offer', offer, room }));
+    })
+  );
+}
+
+function createAnswer(offer) {
+  rtcpeerconnection = buildPeerConnection();
+  rtcpeerconnection.setRemoteDescription(new RTCSessionDescription(offer));
+  rtcpeerconnection.createAnswer().then(answer =>
+    rtcpeerconnection.setLocalDescription(answer).then(() => {
+      ws.send(JSON.stringify({ command: 'answer', answer, room }));
+    })
+  );
+}
+
+/* ── UI: Call button ── */
+function handleCallBtn() {
+  if (!inCall) {
+    inCall = true;
+    document.getElementById('recDot').classList.add('live');
+    document.getElementById('callBtn').className = 'ctrl-btn red-call';
+    document.getElementById('callBtnIcon').className = 'ti ti-phone-pause';
+    startTimer();
+    if (isCreated) createOffer();
+    footerTip.textContent = 'Calling…';
+  } else {
+    /* pause / resume handled via hangup; this toggles hold */
+    document.getElementById('callBtnIcon').className = 'ti ti-phone';
+    document.getElementById('callBtn').className = 'ctrl-btn green';
+    inCall = false;
+    stopTimer();
+    document.getElementById('recDot').classList.remove('live');
+  }
+}
+
+function leaveCall() {
+  if (rtcpeerconnection) { rtcpeerconnection.close(); rtcpeerconnection = null; }
+  inCall = false;
+  stopTimer();
+  document.getElementById('recDot').classList.remove('live');
+  document.getElementById('callBtn').className = 'ctrl-btn green';
+  document.getElementById('callBtnIcon').className = 'ti ti-phone';
+  tileRemote.style.display = 'none';
+  document.getElementById('remotePav').style.display = 'none';
+  document.getElementById('pCount').textContent = '1 in call';
+  setLayout(1);
+  footerTip.textContent = 'Call ended';
+}
+
+/* ── UI: Mic ── */
+function toggleMic() {
+  micOn = !micOn;
+  if (stream) stream.getAudioTracks().forEach(t => t.enabled = micOn);
+  const btn  = document.getElementById('micBtn');
+  const icon = document.getElementById('micIcon');
+  btn.classList.toggle('on', micOn);
+  icon.className = micOn ? 'ti ti-microphone' : 'ti ti-microphone-off';
+}
+
+/* ── UI: Camera ── */
+function toggleCam() {
+  camOn = !camOn;
+  if (stream) stream.getVideoTracks().forEach(t => t.enabled = camOn);
+  const btn  = document.getElementById('camBtn');
+  const icon = document.getElementById('camIcon');
+  btn.classList.toggle('on', camOn);
+  icon.className = camOn ? 'ti ti-video' : 'ti ti-video-off';
+  camSwitchBtn.style.display = camOn ? 'flex' : 'none';
+  our_video.classList.toggle('hidden', !camOn);
+  ourAvatar.style.display = camOn ? 'none' : 'flex';
+}
+
+/* ── UI: Camera flip (front / back) ── */
+function switchCamera() {
+  isFront = !isFront;
+  document.getElementById('camFaceLabel').textContent = isFront ? 'Front' : 'Back';
+
+  const constraints = {
+    video: { facingMode: isFront ? 'user' : { exact: 'environment' } },
+    audio: true
+  };
+
+  navigator.mediaDevices.getUserMedia(constraints)
+    .then(newStream => {
+      stream = newStream;
+      our_video.srcObject = newStream;
+
+      /* replace track in peer connection if active */
+      if (rtcpeerconnection) {
+        const newVidTrack = newStream.getVideoTracks()[0];
+        const sender = rtcpeerconnection.getSenders().find(s => s.track?.kind === 'video');
+        if (sender) sender.replaceTrack(newVidTrack);
+      }
+    })
+    .catch(() => {
+      /* facingMode exact may fail on desktop — silently ignore */
+      document.getElementById('camFaceLabel').textContent = isFront ? 'Front' : 'Back';
+    });
+}
+
+/* ── UI: Screen share ── */
+function toggleScreen() {
+  const btn  = document.getElementById('screenBtn');
+  const icon = document.getElementById('screenIcon');
+  if (!btn.classList.contains('on')) {
+    navigator.mediaDevices.getDisplayMedia({ video: true })
+      .then(screenStream => {
+        const screenTrack = screenStream.getVideoTracks()[0];
+        if (rtcpeerconnection) {
+          const sender = rtcpeerconnection.getSenders().find(s => s.track?.kind === 'video');
+          if (sender) sender.replaceTrack(screenTrack);
+        }
+        our_video.srcObject = screenStream;
+        btn.classList.add('on');
+        icon.className = 'ti ti-screencast-off';
+        screenTrack.onended = () => stopScreen();
+      })
+      .catch(() => {});
+  } else {
+    stopScreen();
+  }
+}
+function stopScreen() {
+  const btn  = document.getElementById('screenBtn');
+  const icon = document.getElementById('screenIcon');
+  if (stream) {
+    our_video.srcObject = stream;
+    if (rtcpeerconnection) {
+      const sender = rtcpeerconnection.getSenders().find(s => s.track?.kind === 'video');
+      if (sender) sender.replaceTrack(stream.getVideoTracks()[0]);
+    }
+  }
+  btn.classList.remove('on');
+  icon.className = 'ti ti-screencast';
+}
+
+/* ── UI: Layout ── */
+function setLayout(n) {
+  currentLayout = n;
+  document.getElementById('grid').className = 'video-grid layout-' + n;
+  [1,2,3].forEach(i => document.getElementById('lay'+i).classList.remove('sel'));
+  document.getElementById('lay'+n).classList.add('sel');
+
+  if (n > 1) tileRemote.style.display = 'flex';
+  else        tileRemote.style.display = 'none';
+}
+
+/* ── Timer ── */
+function pad(n) { return String(n).padStart(2,'0'); }
+function startTimer() {
+  timerSecs = 0;
+  timerIntvl = setInterval(() => {
+    timerSecs++;
+    document.getElementById('timer').textContent =
+      pad(Math.floor(timerSecs / 60)) + ':' + pad(timerSecs % 60);
+  }, 1000);
+}
+function stopTimer() {
+  clearInterval(timerIntvl);
+  document.getElementById('timer').textContent = '00:00';
+  timerSecs = 0;
+}
+</script>
+
+</body>
+</html>
