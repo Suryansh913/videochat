@@ -381,22 +381,18 @@ const iceServers = {
   ]
 };
 
-sed on current location ── */
+/* ── WebSocket URL - Dynamic ── */
 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const host = window.location.host;
-const wsUrl = `${protocol}//${host}/ws/`;
+const host     = window.location.host;
+const wsUrl    = `${protocol}//${host}/ws/${room}/`;
 
 console.log('Connecting to WebSocket:', wsUrl);
 
+/* ── Single WebSocket ── */
 const ws = new WebSocket(wsUrl);
-
-
-/* ── WebSocket ── */
-const ws = new WebSocket("wss://videochat-aijj.onrender.com/ws/chat/");
 
 ws.onopen = () => {
   console.log('WS opened');
-
   ws.send(JSON.stringify({ command: 'join_room', room }));
 
   /* get local media */
@@ -404,7 +400,7 @@ ws.onopen = () => {
     .then(s => {
       stream = s;
       our_video.srcObject = s;
-      ourAvatar.style.display = 'none';   /* hide placeholder once video is live */
+      ourAvatar.style.display = 'none';
       our_video.onloadeddata = () => our_video.play();
     })
     .catch(err => {
@@ -439,7 +435,7 @@ ws.onmessage = (e) => {
 
   if (data.command === 'join') {
     if (isCreated) {
-      footerTip.textContent = 'Participant joined — press the green button to call';
+      footerTip.textContent = 'Participant joined — press green button to call';
       document.getElementById('pCount').textContent = '2 participants';
     }
   }
@@ -448,12 +444,16 @@ ws.onmessage = (e) => {
   }
   else if (data.command === 'answer') {
     if (isCreated) {
-      rtcpeerconnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+      rtcpeerconnection.setRemoteDescription(
+        new RTCSessionDescription(data.answer)
+      );
     }
   }
   else if (data.command === 'candidate') {
     if (rtcpeerconnection) {
-      rtcpeerconnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+      rtcpeerconnection.addIceCandidate(
+        new RTCIceCandidate(data.candidate)
+      );
     }
   }
 };
@@ -461,48 +461,50 @@ ws.onmessage = (e) => {
 /* ── RTC helpers ── */
 function buildPeerConnection() {
   const pc = new RTCPeerConnection(iceServers);
+
   pc.onicecandidate = (e) => {
     if (e.candidate) {
       ws.send(JSON.stringify({
-        command: 'candidate',
-        candidate: e.candidate,
-        iscreated: isCreated,
+        command   : 'candidate',
+        candidate : e.candidate,
+        iscreated : isCreated,
         room
       }));
     }
   };
+
   pc.ontrack = (e) => {
     remote_video.srcObject = e.streams[0];
     remoteAvatar.style.display = 'none';
     remote_video.onloadedmetadata = () => remote_video.play();
-    /* show remote tile */
     tileRemote.style.display = 'flex';
     document.getElementById('remotePav').style.display = 'flex';
     document.getElementById('pCount').textContent = '2 participants';
     if (currentLayout === 1) setLayout(2);
-    footerTip.textContent = 'Connected';
+    footerTip.textContent = 'Connected ✓';
   };
+
   if (stream) stream.getTracks().forEach(t => pc.addTrack(t, stream));
   return pc;
 }
 
 function createOffer() {
   rtcpeerconnection = buildPeerConnection();
-  rtcpeerconnection.createOffer().then(offer =>
-    rtcpeerconnection.setLocalDescription(offer).then(() => {
+  rtcpeerconnection.createOffer()
+    .then(offer => rtcpeerconnection.setLocalDescription(offer)
+    .then(() => {
       ws.send(JSON.stringify({ command: 'offer', offer, room }));
-    })
-  );
+    }));
 }
 
 function createAnswer(offer) {
   rtcpeerconnection = buildPeerConnection();
   rtcpeerconnection.setRemoteDescription(new RTCSessionDescription(offer));
-  rtcpeerconnection.createAnswer().then(answer =>
-    rtcpeerconnection.setLocalDescription(answer).then(() => {
+  rtcpeerconnection.createAnswer()
+    .then(answer => rtcpeerconnection.setLocalDescription(answer)
+    .then(() => {
       ws.send(JSON.stringify({ command: 'answer', answer, room }));
-    })
-  );
+    }));
 }
 
 /* ── UI: Call button ── */
@@ -516,7 +518,6 @@ function handleCallBtn() {
     if (isCreated) createOffer();
     footerTip.textContent = 'Calling…';
   } else {
-    /* pause / resume handled via hangup; this toggles hold */
     document.getElementById('callBtnIcon').className = 'ti ti-phone';
     document.getElementById('callBtn').className = 'ctrl-btn green';
     inCall = false;
@@ -543,51 +544,40 @@ function leaveCall() {
 function toggleMic() {
   micOn = !micOn;
   if (stream) stream.getAudioTracks().forEach(t => t.enabled = micOn);
-  const btn  = document.getElementById('micBtn');
-  const icon = document.getElementById('micIcon');
-  btn.classList.toggle('on', micOn);
-  icon.className = micOn ? 'ti ti-microphone' : 'ti ti-microphone-off';
+  document.getElementById('micBtn').classList.toggle('on', micOn);
+  document.getElementById('micIcon').className =
+    micOn ? 'ti ti-microphone' : 'ti ti-microphone-off';
 }
 
 /* ── UI: Camera ── */
 function toggleCam() {
   camOn = !camOn;
   if (stream) stream.getVideoTracks().forEach(t => t.enabled = camOn);
-  const btn  = document.getElementById('camBtn');
-  const icon = document.getElementById('camIcon');
-  btn.classList.toggle('on', camOn);
-  icon.className = camOn ? 'ti ti-video' : 'ti ti-video-off';
+  document.getElementById('camBtn').classList.toggle('on', camOn);
+  document.getElementById('camIcon').className =
+    camOn ? 'ti ti-video' : 'ti ti-video-off';
   camSwitchBtn.style.display = camOn ? 'flex' : 'none';
   our_video.classList.toggle('hidden', !camOn);
   ourAvatar.style.display = camOn ? 'none' : 'flex';
 }
 
-/* ── UI: Camera flip (front / back) ── */
+/* ── UI: Camera flip ── */
 function switchCamera() {
   isFront = !isFront;
   document.getElementById('camFaceLabel').textContent = isFront ? 'Front' : 'Back';
-
-  const constraints = {
+  navigator.mediaDevices.getUserMedia({
     video: { facingMode: isFront ? 'user' : { exact: 'environment' } },
     audio: true
-  };
-
-  navigator.mediaDevices.getUserMedia(constraints)
-    .then(newStream => {
-      stream = newStream;
-      our_video.srcObject = newStream;
-
-      /* replace track in peer connection if active */
-      if (rtcpeerconnection) {
-        const newVidTrack = newStream.getVideoTracks()[0];
-        const sender = rtcpeerconnection.getSenders().find(s => s.track?.kind === 'video');
-        if (sender) sender.replaceTrack(newVidTrack);
-      }
-    })
-    .catch(() => {
-      /* facingMode exact may fail on desktop — silently ignore */
-      document.getElementById('camFaceLabel').textContent = isFront ? 'Front' : 'Back';
-    });
+  }).then(newStream => {
+    stream = newStream;
+    our_video.srcObject = newStream;
+    if (rtcpeerconnection) {
+      const newVidTrack = newStream.getVideoTracks()[0];
+      const sender = rtcpeerconnection.getSenders()
+        .find(s => s.track?.kind === 'video');
+      if (sender) sender.replaceTrack(newVidTrack);
+    }
+  }).catch(() => {});
 }
 
 /* ── UI: Screen share ── */
@@ -599,26 +589,28 @@ function toggleScreen() {
       .then(screenStream => {
         const screenTrack = screenStream.getVideoTracks()[0];
         if (rtcpeerconnection) {
-          const sender = rtcpeerconnection.getSenders().find(s => s.track?.kind === 'video');
+          const sender = rtcpeerconnection.getSenders()
+            .find(s => s.track?.kind === 'video');
           if (sender) sender.replaceTrack(screenTrack);
         }
         our_video.srcObject = screenStream;
         btn.classList.add('on');
         icon.className = 'ti ti-screencast-off';
         screenTrack.onended = () => stopScreen();
-      })
-      .catch(() => {});
+      }).catch(() => {});
   } else {
     stopScreen();
   }
 }
+
 function stopScreen() {
   const btn  = document.getElementById('screenBtn');
   const icon = document.getElementById('screenIcon');
   if (stream) {
     our_video.srcObject = stream;
     if (rtcpeerconnection) {
-      const sender = rtcpeerconnection.getSenders().find(s => s.track?.kind === 'video');
+      const sender = rtcpeerconnection.getSenders()
+        .find(s => s.track?.kind === 'video');
       if (sender) sender.replaceTrack(stream.getVideoTracks()[0]);
     }
   }
@@ -630,11 +622,11 @@ function stopScreen() {
 function setLayout(n) {
   currentLayout = n;
   document.getElementById('grid').className = 'video-grid layout-' + n;
-  [1,2,3].forEach(i => document.getElementById('lay'+i).classList.remove('sel'));
+  [1,2,3].forEach(i =>
+    document.getElementById('lay'+i).classList.remove('sel')
+  );
   document.getElementById('lay'+n).classList.add('sel');
-
-  if (n > 1) tileRemote.style.display = 'flex';
-  else        tileRemote.style.display = 'none';
+  tileRemote.style.display = (n > 1) ? 'flex' : 'none';
 }
 
 /* ── Timer ── */
@@ -653,6 +645,5 @@ function stopTimer() {
   timerSecs = 0;
 }
 </script>
-
 </body>
 </html>
