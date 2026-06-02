@@ -87,6 +87,20 @@ if DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.config(default=DATABASE_URL, conn_max_age=600)
     }
+    from decouple import config
+    import os
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('DB_NAME'),
+            'USER': config('DB_USER'),
+            'PASSWORD': config('DB_PASSWORD'),
+            'HOST': config('DB_HOST'),
+            'PORT': config('DB_PORT'),
+
+    
+            }
+   }
 else:
     DATABASES = {
         'default': {
@@ -106,7 +120,11 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
+
             "hosts": [REDIS_URL],
+
+            "hosts": [os.environ.get("REDIS_URL")],
+
         },
     },
 }
@@ -156,5 +174,23 @@ if os.path.exists(os.path.join(BASE_DIR, 'static')):
 # WhiteNoise Configuration for serving static files
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# CSRF Configuration
-CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://localhost:8000', cast=lambda v: [s.strip() for s in v.split(',')])
+# CSRF Configuration - Allow all origins for development/testing
+# In production, update CSRF_TRUSTED_ORIGINS to include your domain
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'http://*.onrender.com',
+    'https://*.onrender.com',
+]
+
+# Add any custom origins from environment variable
+custom_origins = config('CSRF_TRUSTED_ORIGINS', default='')
+if custom_origins:
+    CSRF_TRUSTED_ORIGINS.extend([s.strip() for s in custom_origins.split(',')])
+
+# Session and Cookie Configuration for CSRF
+SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_AGE = 31449600

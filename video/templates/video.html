@@ -345,7 +345,7 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════
-     WebRTC + WebSocket logic (your original code, preserved)
+     WebRTC + WebSocket logic with dynamic URL
      ═══════════════════════════════════════════════════════════ -->
 <script>
 /* ── DOM refs ── */
@@ -381,8 +381,18 @@ const iceServers = {
   ]
 };
 
+sed on current location ── */
+const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const host = window.location.host;
+const wsUrl = `${protocol}//${host}/ws/`;
+
+console.log('Connecting to WebSocket:', wsUrl);
+
+const ws = new WebSocket(wsUrl);
+
+
 /* ── WebSocket ── */
-const ws = new WebSocket('ws://127.0.0.1:8000/ws/');
+const ws = new WebSocket("wss://videochat-aijj.onrender.com/ws/chat/");
 
 ws.onopen = () => {
   console.log('WS opened');
@@ -411,6 +421,16 @@ ws.onopen = () => {
     ws.send(JSON.stringify({ command: 'join', room }));
     footerTip.textContent = 'Joined room — waiting for host…';
   }
+};
+
+ws.onerror = (error) => {
+  console.error('WebSocket error:', error);
+  footerTip.textContent = 'Connection error. Check console.';
+};
+
+ws.onclose = () => {
+  console.warn('WebSocket closed');
+  footerTip.textContent = 'Connection closed';
 };
 
 ws.onmessage = (e) => {
