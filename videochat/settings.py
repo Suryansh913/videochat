@@ -53,13 +53,10 @@ TEMPLATES = [
 WSGI_APPLICATION = 'videochat.wsgi.application'
 ASGI_APPLICATION = 'videochat.asgi.application'
 
-# =====================================
-# DATABASE - FIXED ✅
-# =====================================
+# DATABASE
 DATABASE_URL = config('DATABASE_URL', default=None)
 
 if DATABASE_URL:
-    # Agar DATABASE_URL environment variable hai to use karo
     import dj_database_url
     DATABASES = {
         'default': dj_database_url.config(
@@ -68,7 +65,6 @@ if DATABASE_URL:
         )
     }
 else:
-    # Local development ke liye individual settings
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -80,23 +76,18 @@ else:
         }
     }
 
-# =====================================
-# REDIS & CHANNEL LAYERS - FIXED ✅
-# =====================================
+# REDIS
 REDIS_URL = config('REDIS_URL', default='redis://127.0.0.1:6379')
 
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [REDIS_URL],  # ✅ Sirf ek hosts key
+            "hosts": [REDIS_URL],
         },
     },
 }
 
-# =====================================
-# PASSWORD VALIDATION
-# =====================================
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -104,17 +95,12 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# =====================================
-# INTERNATIONALIZATION
-# =====================================
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# =====================================
-# STATIC FILES - Already correct ✅
-# =====================================
+# STATIC FILES
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
@@ -122,11 +108,16 @@ STATICFILES_DIRS = []
 if os.path.exists(os.path.join(BASE_DIR, 'static')):
     STATICFILES_DIRS.append(os.path.join(BASE_DIR, 'static'))
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# Django 6.x ke liye naya tarika
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
-# =====================================
-# CSRF CONFIGURATION
-# =====================================
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8000',
     'http://127.0.0.1:8000',
